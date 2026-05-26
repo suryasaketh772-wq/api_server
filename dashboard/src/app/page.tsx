@@ -39,8 +39,8 @@ export default function LoginPage() {
     setIsLoading(true);
     setErrorMsg("");
 
-    // In local dev, points to localhost:8000; in production, queries relative Nginx proxy
-    const apiHost = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+    // In local dev, points to 127.0.0.1:8000; in production, queries relative Nginx proxy
+    const apiHost = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
 
     try {
       const response = await fetch(`${apiHost}/api/admin/login`, {
