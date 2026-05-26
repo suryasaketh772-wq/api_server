@@ -6,6 +6,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, De
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from admin_api.auth import verify_admin_credentials, create_admin_jwt, decode_admin_jwt
+from backend.app.config import settings
 from websocket.manager import api_server_admin_ws_manager
 from metrics.manager import api_server_metrics_manager
 
