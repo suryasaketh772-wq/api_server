@@ -9,14 +9,6 @@ services:
     restart: always
     environment:
       - ENVIRONMENT=production
-      - DPGOLD_API_URL=${DPGOLD_API_URL:-}
-      - DPGOLD_API_KEY=${DPGOLD_API_KEY:-}
-      - POLL_INTERVAL_SECS=${POLL_INTERVAL_SECS:-2}
-      - WS_HEARTBEAT_INTERVAL_SECS=${WS_HEARTBEAT_INTERVAL_SECS:-30}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
-      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-api_server_super_secret_key_dpgold_admin_2026_99x}
     env_file:
       - ../backend/.env
     expose:

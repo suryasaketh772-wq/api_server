@@ -9,11 +9,6 @@ services:
     restart: always
     environment:
       - ENVIRONMENT=production
-      - DPGOLD_API_URL=${DPGOLD_API_URL:-}
-      - DPGOLD_API_KEY=${DPGOLD_API_KEY:-}
-      - POLL_INTERVAL_SECS=${POLL_INTERVAL_SECS:-2}
-      - WS_HEARTBEAT_INTERVAL_SECS=${WS_HEARTBEAT_INTERVAL_SECS:-30}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
     env_file:
       - .env
     expose:
