@@ -1,0 +1,38 @@
+# Python virtual environments & packages
+venv/
+.venv/
+env/
+ENV/
+*.pyc
+__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node.js dependencies & Next.js builds
+node_modules/
+.next/
+out/
+build/
+dist/
+.next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS-specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Sensitive local configurations
+.env
+.env.local
+.env.production
+.env.development
+.env.staging
+*.log

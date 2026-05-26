@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bullion_backend
+    restart: always
+    environment:
+      - ENVIRONMENT=production
+      - DPGOLD_API_URL=${DPGOLD_API_URL:-}
+      - DPGOLD_API_KEY=${DPGOLD_API_KEY:-}
+      - POLL_INTERVAL_SECS=${POLL_INTERVAL_SECS:-2}
+      - WS_HEARTBEAT_INTERVAL_SECS=${WS_HEARTBEAT_INTERVAL_SECS:-30}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+    env_file:
+      - .env
+    expose:
+      - "8000"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: bullion_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      # SSL volume mount - for mounting production Let's Encrypt certificates
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+    depends_on:
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

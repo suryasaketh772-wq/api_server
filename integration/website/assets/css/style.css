@@ -1,0 +1,373 @@
+/* ============================================================================
+   PREMIUM GLASSMORPHISM & GOLD BULLION SYSTEM STYLING
+   ============================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+    --bg-dark: hsl(220, 25%, 7%);
+    --bg-card: hsla(220, 20%, 12%, 0.65);
+    --gold-primary: hsl(45, 60%, 55%);
+    --gold-gradient: linear-gradient(135deg, hsl(45, 75%, 60%), hsl(38, 70%, 45%));
+    --silver-primary: hsl(0, 0%, 90%);
+    --silver-gradient: linear-gradient(135deg, hsl(0, 0%, 95%), hsl(0, 0%, 65%));
+    
+    --text-main: hsl(0, 0%, 95%);
+    --text-muted: hsl(215, 12%, 60%);
+    --text-light: hsl(0, 0%, 100%);
+    
+    --accent-green: hsl(140, 80%, 48%);
+    --accent-red: hsl(355, 80%, 55%);
+    --border-color: hsla(0, 0%, 100%, 0.06);
+    
+    --glass-blur: 16px;
+    --transition-smooth: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* Ambient glow blobs in the background */
+body::before, body::after {
+    content: '';
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    filter: blur(140px);
+    z-index: -1;
+    opacity: 0.15;
+}
+body::before {
+    top: 5%;
+    left: 10%;
+    background-color: hsl(45, 75%, 50%);
+}
+body::after {
+    bottom: 10%;
+    right: 10%;
+    background-color: hsl(210, 80%, 45%);
+}
+
+.app-container {
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+/* Header Area */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 50px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.logo-block h1 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: var(--gold-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.logo-block p {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-top: 2px;
+}
+
+/* Connection Status Indicator Badge */
+.status-badge {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    backdrop-filter: blur(var(--glass-blur));
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--accent-red);
+    box-shadow: 0 0 8px var(--accent-red);
+    transition: var(--transition-smooth);
+}
+
+/* State specific indicator colors */
+.status-badge.connected .status-dot {
+    background-color: var(--accent-green);
+    box-shadow: 0 0 10px var(--accent-green);
+    animation: statusPulse 2s infinite ease-in-out;
+}
+
+.status-badge.fallback .status-dot {
+    background-color: hsl(35, 100%, 50%);
+    box-shadow: 0 0 10px hsl(35, 100%, 50%);
+    animation: statusPulse 1.5s infinite ease-in-out;
+}
+
+.status-badge.connecting .status-dot {
+    background-color: hsl(195, 80%, 50%);
+    box-shadow: 0 0 10px hsl(195, 80%, 50%);
+    animation: statusBlink 0.8s infinite alternate;
+}
+
+/* Grid Layout for Cards */
+.grid-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 30px;
+    margin-bottom: 50px;
+}
+
+/* Glassmorphism Pricing Cards */
+.price-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    padding: 30px;
+    transition: var(--transition-smooth);
+    position: relative;
+    overflow: hidden;
+}
+
+.price-card:hover {
+    transform: translateY(-5px);
+    border-color: hsla(0, 0%, 100%, 0.12);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Gold specific accent border top */
+.price-card.gold-card {
+    border-top: 3px solid hsl(45, 60%, 55%);
+}
+
+/* Silver specific accent border top */
+.price-card.silver-card {
+    border-top: 3px solid hsl(0, 0%, 75%);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.card-header h2 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+}
+
+.metal-badge {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 8px;
+    letter-spacing: 0.5px;
+}
+
+.gold-card .metal-badge {
+    background: rgba(212, 175, 55, 0.12);
+    color: var(--gold-primary);
+}
+
+.silver-card .metal-badge {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-main);
+}
+
+.main-price {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 24px;
+    transition: var(--transition-smooth);
+    display: inline-block;
+}
+
+.gold-card .main-price {
+    color: var(--text-light);
+}
+
+.silver-card .main-price {
+    color: var(--text-light);
+}
+
+/* Ranges (High / Lows) Section */
+.range-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.range-box {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.range-box span.label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.range-box span.value {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.range-box.high span.value {
+    color: var(--accent-green);
+}
+
+.range-box.low span.value {
+    color: var(--accent-red);
+}
+
+/* USD/INR Info Row */
+.usd-inr-card {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+}
+
+.inr-rate-display {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.inr-rate-display span.label {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.inr-rate-display span.value {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--gold-primary);
+}
+
+.timestamp-display {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* Footer Section */
+footer {
+    text-align: center;
+    padding: 30px;
+    border-top: 1px solid var(--border-color);
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* ============================================================================
+   MICRO-ANIMATIONS FOR LIVE TICK UPDATE VALUES
+   ============================================================================ */
+
+/* Pulsing effect classes added by JS */
+.price-up {
+    animation: flashGreen 0.7s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+.price-down {
+    animation: flashRed 0.7s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+@keyframes flashGreen {
+    0% {
+        color: var(--accent-green);
+        text-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
+        transform: scale(1.02);
+    }
+    100% {
+        color: var(--text-light);
+        text-shadow: none;
+        transform: scale(1);
+    }
+}
+
+@keyframes flashRed {
+    0% {
+        color: var(--accent-red);
+        text-shadow: 0 0 15px rgba(255, 59, 48, 0.4);
+        transform: scale(1.02);
+    }
+    100% {
+        color: var(--text-light);
+        text-shadow: none;
+        transform: scale(1);
+    }
+}
+
+@keyframes statusPulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.6; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes statusBlink {
+    from { opacity: 1; }
+    to { opacity: 0.3; }
+}
+
+@media (max-width: 768px) {
+    header {
+        flex-direction: column;
+        gap: 20px;
+        align-items: flex-start;
+    }
+    .status-badge {
+        align-self: stretch;
+        justify-content: center;
+    }
+    .grid-layout {
+        grid-template-columns: 1fr;
+    }
+    .usd-inr-card {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+}

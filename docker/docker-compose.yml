@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  api_server_backend:
+    build:
+      context: ../
+      dockerfile: docker/api_server_backend.Dockerfile
+    container_name: api_server_backend
+    restart: always
+    environment:
+      - ENVIRONMENT=production
+      - DPGOLD_API_URL=${DPGOLD_API_URL:-}
+      - DPGOLD_API_KEY=${DPGOLD_API_KEY:-}
+      - POLL_INTERVAL_SECS=${POLL_INTERVAL_SECS:-2}
+      - WS_HEARTBEAT_INTERVAL_SECS=${WS_HEARTBEAT_INTERVAL_SECS:-30}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-api_server_super_secret_key_dpgold_admin_2026_99x}
+    env_file:
+      - ../backend/.env
+    expose:
+      - "8000"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  api_server_dashboard:
+    build:
+      context: ../
+      dockerfile: docker/api_server_dashboard.Dockerfile
+    container_name: api_server_dashboard
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-}
+    expose:
+      - "3000"
+    depends_on:
+      - api_server_backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  api_server_nginx:
+    image: nginx:1.27-alpine
+    container_name: api_server_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/conf.d:/etc/nginx/conf.d:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+    depends_on:
+      - api_server_backend
+      - api_server_dashboard
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

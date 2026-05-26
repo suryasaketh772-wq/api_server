@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Premium dark/obsidian solid background -->
+    <solid android:color="#121212" />
+    
+    <!-- Sophisticated gold border stroke -->
+    <stroke
+        android:width="1.5dp"
+        android:color="#D4AF37" />
+    
+    <!-- Modern rounded corners matching Spotify-style aesthetic -->
+    <corners android:radius="20dp" />
+    
+    <padding
+        android:left="16dp"
+        android:top="16dp"
+        android:right="16dp"
+        android:bottom="16dp" />
+</shape>

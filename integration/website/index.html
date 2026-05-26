@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Live Bullion Pricing Dashboard</title>
+    <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- Dashboard Header -->
+        <header>
+            <div class="logo-block">
+                <h1>DPGOLD PRICING SYSTEM</h1>
+                <p>Centralised Distributed Realtime Price Feeds</p>
+            </div>
+            
+            <!-- Connection Status Badge -->
+            <div id="statusBadge" class="status-badge connecting">
+                <span class="status-dot"></span>
+                <span id="statusText">CONNECTING...</span>
+            </div>
+        </header>
+
+        <!-- Pricing Grid -->
+        <main class="grid-layout">
+            
+            <!-- Gold Card -->
+            <section class="price-card gold-card">
+                <div class="card-header">
+                    <h2>SPOT TRADING</h2>
+                    <span class="metal-badge">GOLD OUNCE</span>
+                </div>
+                <div id="goldPrice" class="main-price">$0.00</div>
+                
+                <div class="range-stats">
+                    <div class="range-box high">
+                        <span class="label">Today's High</span>
+                        <span id="goldHigh" class="value">$0.00</span>
+                    </div>
+                    <div class="range-box low">
+                        <span class="label">Today's Low</span>
+                        <span id="goldLow" class="value">$0.00</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Silver Card -->
+            <section class="price-card silver-card">
+                <div class="card-header">
+                    <h2>SPOT TRADING</h2>
+                    <span class="metal-badge">SILVER OUNCE</span>
+                </div>
+                <div id="silverPrice" class="main-price">$0.00</div>
+                
+                <div class="range-stats">
+                    <div class="range-box high">
+                        <span class="label">Today's High</span>
+                        <span id="silverHigh" class="value">$0.00</span>
+                    </div>
+                    <div class="range-box low">
+                        <span class="label">Today's Low</span>
+                        <span id="silverLow" class="value">$0.00</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- USD/INR exchange rate & last updated telemetry -->
+            <section class="price-card usd-inr-card">
+                <div class="inr-rate-display">
+                    <span class="label">USD / INR EXCHANGE RATE</span>
+                    <span id="usdInrRate" class="value">00.00</span>
+                </div>
+                <div id="lastUpdated" class="timestamp-display">
+                    Last updated: Calculating...
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Footer -->
+        <footer>
+            <p>&copy; 2026 Bullion Infrastructure Systems. All connections are routed through centralized backend services.</p>
+        </footer>
+
+    </div>
+
+    <!-- Integrations Script -->
+    <script type="module">
+        import BullionWebSocketClient from './assets/js/websocket_client.js';
+
+        // Configure connection details
+        // In local development: http://localhost:8000
+        // In production: Use window.location.origin, or specify your EC2 endpoint (e.g. 'https://bullion.yourdomain.com')
+        const backendBaseUrl = 'http://localhost:8000';
+
+        // Visual formatters for currencies
+        const usdFormatter = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+
+        const rateFormatter = new Intl.NumberFormat('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+
+        // Store previous pricing state to track trends and trigger green/red flashes
+        let prevPriceState = {
+            goldSpot: 0,
+            silverSpot: 0
+        };
+
+        // Cache DOM elements
+        const elements = {
+            goldPrice: document.getElementById('goldPrice'),
+            goldHigh: document.getElementById('goldHigh'),
+            goldLow: document.getElementById('goldLow'),
+            
+            silverPrice: document.getElementById('silverPrice'),
+            silverHigh: document.getElementById('silverHigh'),
+            silverLow: document.getElementById('silverLow'),
+            
+            usdInrRate: document.getElementById('usdInrRate'),
+            lastUpdated: document.getElementById('lastUpdated'),
+            
+            statusBadge: document.getElementById('statusBadge'),
+            statusText: document.getElementById('statusText')
+        };
+
+        // Initialize the pricing WebSocket client
+        const client = new BullionWebSocketClient(backendBaseUrl, {
+            onPriceUpdate: (price) => {
+                renderPrices(price);
+            },
+            onStateChange: (state) => {
+                renderStatus(state);
+            }
+        });
+
+        // Start connection sequence
+        client.connect();
+
+        function renderPrices(price) {
+            // 1. Process Gold rates and apply directional visual cues
+            const currentGold = price.gold_spot;
+            elements.goldPrice.textContent = usdFormatter.format(currentGold);
+            elements.goldHigh.textContent = usdFormatter.format(price.gold_high);
+            elements.goldLow.textContent = usdFormatter.format(price.gold_low);
+
+            if (prevPriceState.goldSpot > 0 && currentGold !== prevPriceState.goldSpot) {
+                const flashClass = currentGold > prevPriceState.goldSpot ? 'price-up' : 'price-down';
+                triggerPulse(elements.goldPrice, flashClass);
+            }
+            prevPriceState.goldSpot = currentGold;
+
+            // 2. Process Silver rates and apply directional visual cues
+            const currentSilver = price.silver_spot;
+            elements.silverPrice.textContent = usdFormatter.format(currentSilver);
+            elements.silverHigh.textContent = usdFormatter.format(price.silver_high);
+            elements.silverLow.textContent = usdFormatter.format(price.silver_low);
+
+            if (prevPriceState.silverSpot > 0 && currentSilver !== prevPriceState.silverSpot) {
+                const flashClass = currentSilver > prevPriceState.silverSpot ? 'price-up' : 'price-down';
+                triggerPulse(elements.silverPrice, flashClass);
+            }
+            prevPriceState.silverSpot = currentSilver;
+
+            // 3. Process USD/INR rate
+            elements.usdInrRate.textContent = rateFormatter.format(price.usd_inr);
+
+            // 4. Formulate timestamp text
+            const timestamp = new Date(price.timestamp * 1000);
+            elements.lastUpdated.textContent = `Last updated: ${timestamp.toLocaleTimeString()}`;
+        }
+
+        function triggerPulse(element, className) {
+            element.classList.remove('price-up', 'price-down');
+            // Force redraw tick to re-trigger the CSS animation
+            void element.offsetWidth;
+            element.classList.add(className);
+        }
+
+        function renderStatus(state) {
+            // Remove previous status modifier classes
+            elements.statusBadge.classList.remove('connected', 'connecting', 'fallback');
+            
+            switch (state) {
+                case 'CONNECTED':
+                    elements.statusBadge.classList.add('connected');
+                    elements.statusText.textContent = 'REALTIME (WEBSOCKET)';
+                    break;
+                case 'CONNECTING':
+                case 'RECONNECTING':
+                    elements.statusBadge.classList.add('connecting');
+                    elements.statusText.textContent = 'CONNECTING...';
+                    break;
+                case 'FALLBACK_POLLING':
+                    elements.statusBadge.classList.add('fallback');
+                    elements.statusText.textContent = 'DEGRADED (REST POLL 5s)';
+                    break;
+                default:
+                    elements.statusText.textContent = 'DISCONNECTED';
+                    break;
+            }
+        }
+    </script>
+</body>
+</html>
