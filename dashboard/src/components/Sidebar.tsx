@@ -8,12 +8,17 @@ import {
   Terminal, 
   Database, 
   LogOut, 
-  TrendingUp,
-  Cpu
+  Cpu,
+  X
 } from "lucide-react";
 import { useAdminStore } from "@/store/adminStore";
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const logout = useAdminStore((state) => state.logout);
   const username = useAdminStore((state) => state.username);
@@ -25,17 +30,29 @@ export default function Sidebar() {
     { name: "Bullion Cache", path: "/admin/cache", icon: Database },
   ];
 
-  return (
-    <aside className="w-64 border-r border-border bg-card/45 backdrop-blur-glass min-h-screen flex flex-col justify-between p-6">
+  const sidebarContent = (
+    <aside className="w-64 border-r border-border bg-card/45 backdrop-blur-glass h-full flex flex-col justify-between p-6">
       <div className="flex flex-col gap-8">
         
         {/* Brand Block */}
         <div className="flex flex-col">
-          <div className="flex items-center gap-2">
-            <Cpu className="text-gold-primary w-6 h-6 animate-pulse" />
-            <h2 className="text-lg font-extrabold uppercase tracking-tight text-gold-light">
-              api_server
-            </h2>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Cpu className="text-gold-primary w-6 h-6 animate-pulse" />
+              <h2 className="text-lg font-extrabold uppercase tracking-tight text-gold-light">
+                api_server
+              </h2>
+            </div>
+            {/* Close button — only visible on mobile */}
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="md:hidden text-muted hover:text-foreground transition-colors p-1"
+                aria-label="Close menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
           </div>
           <span className="text-[10px] text-muted font-bold tracking-widest uppercase mt-1">
             Administration Console
@@ -49,7 +66,7 @@ export default function Sidebar() {
             const isActive = pathname === item.path;
             
             return (
-              <Link key={item.path} href={item.path}>
+              <Link key={item.path} href={item.path} onClick={onClose}>
                 <span className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
                   isActive 
                     ? "bg-gold-primary/10 border-l-4 border-gold-primary text-gold-primary" 
@@ -80,5 +97,33 @@ export default function Sidebar() {
         </button>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* ── Desktop: always-visible static sidebar ── */}
+      <div className="hidden md:flex h-screen sticky top-0 shrink-0">
+        {sidebarContent}
+      </div>
+
+      {/* ── Mobile: slide-in drawer with backdrop ── */}
+      {/* Backdrop overlay */}
+      <div
+        className={`md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${
+          isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Drawer panel */}
+      <div
+        className={`md:hidden fixed inset-y-0 left-0 z-50 h-full transition-transform duration-300 ease-out ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {sidebarContent}
+      </div>
+    </>
   );
 }

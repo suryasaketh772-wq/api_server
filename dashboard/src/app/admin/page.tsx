@@ -130,16 +130,16 @@ export default function AdminDashboardPage() {
       
       {/* 1. Page Title */}
       <div className="flex flex-col">
-        <h1 className="text-3xl font-extrabold tracking-tight uppercase text-white">
+        <h1 className="text-xl md:text-3xl font-extrabold tracking-tight uppercase text-white leading-tight">
           Metrics Operations Console
         </h1>
-        <p className="text-sm text-muted font-semibold tracking-wider mt-1 uppercase">
+        <p className="text-xs md:text-sm text-muted font-semibold tracking-wider mt-1 uppercase">
           Live Centralised distributed price statistics monitor
         </p>
       </div>
 
       {/* 2. Live Spot Pricing Accent Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 w-full">
         
         {/* Spot Gold */}
         <Card className="border-l-4 border-l-gold-primary bg-card/65 relative overflow-hidden">
@@ -192,7 +192,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* 3. System Overview metric cards grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 w-full">
         {metricsList.map((metric, index) => {
           const Icon = metric.icon;
           
@@ -222,7 +222,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* 4. Live Charts grid layout */}
-      <div className="w-full mt-2">
+      <div className="w-full mt-2 min-w-0 overflow-hidden">
         <LiveCharts />
       </div>
 

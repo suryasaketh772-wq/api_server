@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Cpu, RefreshCw, AlertTriangle, ShieldCheck, Wifi, Clock } from "lucide-react";
+import { Cpu, RefreshCw, Wifi, Clock, Menu } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import { useAdminStore } from "@/store/adminStore";
 
@@ -23,6 +23,7 @@ export default function AdminLayout({
   } = useAdminStore();
 
   const [timeStr, setTimeStr] = useState("00:00:00");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Verify auth session details on mount
   useEffect(() => {
@@ -87,31 +88,42 @@ export default function AdminLayout({
     <div className="flex bg-background text-foreground min-h-screen relative z-10">
       
       {/* Sidebar Navigation */}
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main Container screen */}
       <div className="flex-1 flex flex-col min-w-0">
         
         {/* Dynamic Telemetry status Header */}
-        <header className="h-20 border-b border-border bg-card/15 backdrop-blur-glass flex items-center justify-between px-8 shrink-0">
+        <header className="h-16 md:h-20 border-b border-border bg-card/15 backdrop-blur-glass flex items-center justify-between px-4 md:px-8 shrink-0 gap-3">
           
-          {/* Left section: Service Status Pill */}
-          <div className="flex items-center gap-3">
-            <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-bold transition-all duration-300 ${
+          {/* Left section: Hamburger (mobile) + Status Pill */}
+          <div className="flex items-center gap-3 min-w-0">
+
+            {/* Hamburger — mobile only */}
+            <button
+              className="md:hidden flex-shrink-0 p-2 rounded-lg text-muted hover:text-foreground hover:bg-white/5 transition-all duration-200"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open navigation menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            {/* Service Status Pill */}
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold transition-all duration-300 flex-shrink-0 ${
               isConnected 
                 ? "bg-green-accent/10 border-green-accent/20 text-green-accent" 
                 : isConnecting 
                   ? "bg-sky-500/10 border-sky-500/20 text-sky-400"
                   : "bg-red-accent/10 border-red-accent/20 text-red-accent"
             }`}>
-              <span className={`w-2 h-2 rounded-full ${
+              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
                 isConnected 
                   ? "bg-green-accent shadow-[0_0_8px_hsl(140,80%,48%)] animate-status-pulse" 
                   : isConnecting 
                     ? "bg-sky-400 animate-status-blink"
                     : "bg-red-accent shadow-[0_0_8px_hsl(355,80%,55%)]"
               }`} />
-              <span className="uppercase tracking-widest text-[9px]">
+              <span className="uppercase tracking-widest text-[9px] whitespace-nowrap">
                 {isConnected 
                   ? "Console Sync Active" 
                   : isConnecting 
@@ -120,16 +132,16 @@ export default function AdminLayout({
               </span>
             </div>
             
-            {/* Live Client count indicator snippet */}
+            {/* Live Client count — hidden on mobile */}
             {isConnected && latestTelemetry && (
-              <span className="text-[10px] text-muted font-extrabold uppercase tracking-widest">
+              <span className="hidden lg:block text-[10px] text-muted font-extrabold uppercase tracking-widest truncate">
                 Active Client Node Pools: {latestTelemetry.websocket.active_connections}
               </span>
             )}
           </div>
 
-          {/* Right section: System Telemetry pills */}
-          <div className="flex items-center gap-6">
+          {/* Right section: System Telemetry pills — hidden on mobile */}
+          <div className="hidden md:flex items-center gap-6 flex-shrink-0">
             
             {/* Uptime clock */}
             <div className="flex items-center gap-2 text-xs font-semibold text-muted">
@@ -167,7 +179,7 @@ export default function AdminLayout({
         </header>
 
         {/* Client screen Viewport */}
-        <main className="flex-1 overflow-y-auto p-8 min-h-0">
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 min-h-0">
           {children}
         </main>
         

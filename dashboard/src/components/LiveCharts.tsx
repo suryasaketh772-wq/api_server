@@ -30,9 +30,9 @@ export default function LiveCharts() {
 
   if (!mounted) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 w-full">
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="h-80 w-full animate-pulse bg-white/5 flex items-center justify-center">
+          <Card key={i} className="h-64 md:h-80 w-full animate-pulse bg-white/5 flex items-center justify-center">
             <span className="text-sm text-muted font-semibold tracking-wider">Initialising live canvas charts...</span>
           </Card>
         ))}
