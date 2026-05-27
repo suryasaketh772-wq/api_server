@@ -91,10 +91,23 @@
     <script type="module">
         import BullionWebSocketClient from './assets/js/websocket_client.js';
 
-        // Configure connection details
-        // In local development: http://localhost:8000
-        // In production: Use window.location.origin, or specify your EC2 endpoint (e.g. 'https://bullion.yourdomain.com')
-        const backendBaseUrl = 'http://localhost:8000';
+        // Dynamically resolve the backend URL based on the accessing device's browser address
+        const getBackendUrl = () => {
+            const hostname = window.location.hostname;
+            const protocol = window.location.protocol;
+            // 1. Local loopback testing
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                return 'http://127.0.0.1:8000';
+            }
+            
+            // 2. Local Network IP testing (e.g., http://192.168.1.149:8080)
+            if (/^[0-9.]+$/.test(hostname)) {
+                return `${protocol}//${hostname}:8000`;
+            }
+            // 3. Production server domain (standard proxy through Nginx)
+            return `${protocol}//${hostname}`;
+        };
+        const backendBaseUrl = getBackendUrl();
 
         // Visual formatters for currencies
         const usdFormatter = new Intl.NumberFormat('en-US', {
