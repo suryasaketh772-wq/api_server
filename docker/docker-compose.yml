@@ -25,9 +25,11 @@ services:
       dockerfile: docker/api_server_dashboard.Dockerfile
     container_name: api_server_dashboard
     restart: always
+    env_file:
+      - ../backend/.env
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-}
+      - NEXT_PUBLIC_BACKEND_URL=http://3.93.145.57
     expose:
       - "3000"
     depends_on:
