@@ -111,3 +111,47 @@ def test_admin_websocket_unauthorized_bad_token():
     with client.websocket_connect("/ws/admin?token=invalid_token") as websocket:
         with pytest.raises(Exception):
             websocket.receive_json()
+
+# ============================================================================
+# 4. ADMIN PRICE STREAMING SWITCH CHECKS
+# ============================================================================
+
+def test_admin_stream_status_endpoint():
+    """Verifies retrieval of current price streaming state under JWT security."""
+    token = create_admin_jwt("admin")
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # 1. Successful retrieval
+    response = client.get("/api/admin/stream-status", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["enabled"] is True
+    
+    # 2. Unauthorized request validation
+    response_unauth = client.get("/api/admin/stream-status")
+    assert response_unauth.status_code == 401
+
+def test_admin_toggle_stream_endpoint():
+    """Verifies dynamic toggling of the global WebSocket price broadcasting engine state."""
+    token = create_admin_jwt("admin")
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # 1. Toggle stream OFF
+    response_off = client.post("/api/admin/toggle-stream", json={"enabled": False}, headers=headers)
+    assert response_off.status_code == 200
+    assert response_off.json()["enabled"] is False
+    
+    # Verify global state variable was indeed flipped
+    from backend.app.core.stream_state import STREAMING_ENABLED
+    assert bool(STREAMING_ENABLED) is False
+    
+    # 2. Toggle stream back ON
+    response_on = client.post("/api/admin/toggle-stream", json={"enabled": True}, headers=headers)
+    assert response_on.status_code == 200
+    assert response_on.json()["enabled"] is True
+    
+    from backend.app.core.stream_state import STREAMING_ENABLED as STREAMING_ENABLED_ON
+    assert bool(STREAMING_ENABLED_ON) is True
+    
+    # 3. Unauthorized toggler validation
+    response_unauth = client.post("/api/admin/toggle-stream", json={"enabled": False})
+    assert response_unauth.status_code == 401

@@ -44,7 +44,7 @@ export default function AdminLayout({
   // Connect WebSocket when authenticated and active
   useEffect(() => {
     if (isAuthenticated) {
-      const apiHost = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+      const apiHost = process.env.NEXT_PUBLIC_BACKEND_URL || window.location.origin;
       connectWS(apiHost);
     }
     return () => {

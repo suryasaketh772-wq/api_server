@@ -46,6 +46,61 @@ async def admin_verify(credentials: HTTPAuthorizationCredentials = Depends(secur
     
     return {"status": "valid", "username": payload.get("sub", "admin")}
 
+@admin_router.get("/api/admin/stream-status")
+async def get_stream_status(credentials: HTTPAuthorizationCredentials = Depends(security_bearer)):
+    """Fetches the current real-time WebSocket streaming state."""
+    payload = decode_admin_jwt(credentials.credentials)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Session expired or invalid")
+    
+    from backend.app.core.stream_state import STREAMING_ENABLED
+    return {"enabled": STREAMING_ENABLED.enabled}
+
+class ToggleStreamRequest(BaseModel):
+    enabled: bool
+
+@admin_router.post("/api/admin/toggle-stream")
+async def toggle_stream(
+    request: ToggleStreamRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security_bearer)
+):
+    """Dynamically activates or pauses the real-time clients price streaming engine."""
+    payload = decode_admin_jwt(credentials.credentials)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Session expired or invalid")
+    
+    from backend.app.core.stream_state import STREAMING_ENABLED, STREAM_LOCK
+    from websocket.manager import api_server_client_ws_manager
+    import json
+    
+    # 1. Update shared state thread-safely under asyncio Lock
+    async with STREAM_LOCK:
+        STREAMING_ENABLED.enabled = request.enabled
+    
+    # 2. Update compatibility global variable in websocket.manager (for test suite assertions)
+    import websocket.manager
+    websocket.manager.STREAMING_ENABLED = request.enabled
+    
+    # 3. Notify all connected admin consoles instantly for cross-device sync
+    await api_server_admin_ws_manager.broadcast_payload({
+        "type": "stream_status_changed",
+        "enabled": request.enabled
+    })
+    
+    # 4. Notify all connected client websockets (Flutter/Web/Android)
+    if not request.enabled:
+        await api_server_client_ws_manager.broadcast(json.dumps({
+            "type": "stream_paused"
+        }), ignore_gate=True)
+        logger.info("Bullion WebSocket pricing stream PAUSED by administrator.")
+    else:
+        await api_server_client_ws_manager.broadcast(json.dumps({
+            "type": "stream_resumed"
+        }), ignore_gate=True)
+        logger.info("Bullion WebSocket pricing stream RESUMED by administrator.")
+        
+    return {"enabled": request.enabled}
+
 @admin_router.websocket("/ws/admin")
 async def admin_websocket_endpoint(websocket: WebSocket, token: str = Query(None)):
     """

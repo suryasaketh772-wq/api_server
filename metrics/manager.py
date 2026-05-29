@@ -41,11 +41,13 @@ class MetricsManager:
     async def _monitoring_loop(self) -> None:
         while self._is_loop_running:
             try:
-                # Compile unified telemetry metrics payload
-                payload = await self.get_unified_metrics_payload()
-                
-                # Broadcast payload to all open admin WebSocket consoles
-                await api_server_admin_ws_manager.broadcast_payload(payload)
+                from backend.app.core.stream_state import STREAMING_ENABLED
+                if STREAMING_ENABLED:
+                    # Compile unified telemetry metrics payload
+                    payload = await self.get_unified_metrics_payload()
+                    
+                    # Broadcast payload to all open admin WebSocket consoles
+                    await api_server_admin_ws_manager.broadcast_payload(payload)
                 
                 # Sleep exactly 1.0 seconds for consistent chart rendering intervals
                 await asyncio.sleep(1.0)
@@ -92,10 +94,14 @@ class MetricsManager:
             "timestamps": list(self.app_collector.price_history_timestamps)
         }
 
+        # Import global stream state dynamically
+        from backend.app.core.stream_state import STREAMING_ENABLED
+
         return {
             "type": "telemetry",
             "timestamp": time.time(),
             "uptime_seconds": round(time.time() - self._server_start_time, 2),
+            "streaming_enabled": STREAMING_ENABLED.enabled,
             "system": system_stats,
             "websocket": {
                 "active_connections": active_sockets,
@@ -109,6 +115,14 @@ class MetricsManager:
             "cache": cache_metrics,
             "history": spot_history
         }
+
+    async def broadcast_telemetry_immediately(self) -> None:
+        """Immediately broadcasts the latest metrics payload to all active admin panels."""
+        try:
+            payload = await self.get_unified_metrics_payload()
+            await api_server_admin_ws_manager.broadcast_payload(payload)
+        except Exception as e:
+            logger.error(f"Failed to broadcast telemetry immediately: {e}")
 
 # Global singleton metrics manager instance
 api_server_metrics_manager = MetricsManager()

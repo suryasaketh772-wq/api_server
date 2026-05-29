@@ -46,18 +46,23 @@ async def websocket_prices_endpoint(websocket: WebSocket):
             await websocket.send_text(json.dumps(dual_payload))
         except Exception:
             # Client disconnected immediately after connect
-            await api_server_client_ws_manager.disconnect(websocket)
+            await api_server_client_ws_manager.disconnect(websocket, is_clean=False)
             return
 
     try:
         # Keep connection open and await incoming client messages (or pong keep-alives)
         while True:
-            # Standard clients do not need to write frames. We listen strictly to detect socket drops.
-            _ = await websocket.receive_text()
-    except WebSocketDisconnect:
-        await api_server_client_ws_manager.disconnect(websocket)
+            msg = await websocket.receive_text()
+            if msg == "ping":
+                await websocket.send_text("pong")
+            elif msg == "pong":
+                # Handle client responding to backend pings
+                pass
+    except WebSocketDisconnect as e:
+        is_clean = e.code in [1000, 1001]
+        await api_server_client_ws_manager.disconnect(websocket, is_clean=is_clean)
     except Exception:
-        await api_server_client_ws_manager.disconnect(websocket)
+        await api_server_client_ws_manager.disconnect(websocket, is_clean=False)
 
 @router.get("/api/v1/prices")
 async def get_prices_v1():

@@ -59,6 +59,12 @@ class BullionPollingService:
             timeout=aiohttp.ClientTimeout(total=5.0)
         ) as session:
             while self.is_running:
+                # Gated price streaming switch check
+                from backend.app.core.stream_state import STREAMING_ENABLED
+                if not STREAMING_ENABLED:
+                    await asyncio.sleep(1)
+                    continue
+
                 try:
                     start_time = time.time()
                     

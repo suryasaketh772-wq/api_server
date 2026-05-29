@@ -13,7 +13,24 @@ class BullionWebSocketClient {
     constructor(baseUrl, callbacks = {}) {
         // Normalise URLs to support HTTP/WS protocols correctly
         this.baseUrl = baseUrl.replace(/\/$/, '');
-        this.wsUrl = this.baseUrl.replace(/^http/, 'ws') + '/ws/prices';
+        
+        // Generate or retrieve persistent client_id from localStorage
+        let id = null;
+        if (typeof window !== 'undefined' && window.localStorage) {
+            id = window.localStorage.getItem('bullion_ws_client_id');
+            if (!id) {
+                if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                    id = crypto.randomUUID();
+                } else {
+                    id = 'web_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+                }
+                window.localStorage.setItem('bullion_ws_client_id', id);
+            }
+        }
+        this.clientId = id || ('temp_' + Math.random().toString(36).substring(2, 15));
+        this.platform = 'web';
+        
+        this.wsUrl = this.baseUrl.replace(/^http/, 'ws') + `/ws/prices?client_id=${this.clientId}&platform=${this.platform}`;
         
         this.onPriceUpdate = callbacks.onPriceUpdate || (() => {});
         this.onStateChange = callbacks.onStateChange || (() => {});
@@ -27,6 +44,7 @@ class BullionWebSocketClient {
         this.maxReconnectAttempts = 5;
         this.reconnectDelay = 1000; // Starts at 1s
         this.isFallbackActive = false;
+        this.isWebSocketEnabled = true; // Manual control override state
         
         this.state = 'DISCONNECTED';
         this._updateState('DISCONNECTED');
@@ -39,9 +57,54 @@ class BullionWebSocketClient {
     }
 
     /**
+     * Enables WebSocket connection and initiates connection.
+     */
+    enableWebSocket() {
+        if (this.isWebSocketEnabled) return;
+        this.isWebSocketEnabled = true;
+        console.log('[BullionClient] WebSocket enabled manually.');
+        
+        // Disable REST Fallback polling loop if running
+        this._stopRESTFallback();
+        
+        // Trigger reconnection sequence
+        this.reconnectAttempts = 0;
+        this.reconnectDelay = 1000;
+        this.connect();
+    }
+
+    /**
+     * Disables WebSocket connection, cleanly closes active socket, and activates REST polling.
+     */
+    disableWebSocket() {
+        if (!this.isWebSocketEnabled) return;
+        this.isWebSocketEnabled = false;
+        console.log('[BullionClient] WebSocket disabled manually.');
+        
+        // Cleanup socket connection and connection timers
+        this._cleanupTimers();
+        if (this.socket) {
+            // Nullify event handlers to avoid triggering auto-disconnect/fallback loops again
+            this.socket.onclose = null;
+            this.socket.onerror = null;
+            this.socket.close();
+            this.socket = null;
+        }
+        
+        this._updateState('DISCONNECTED');
+        
+        // Immediately engage REST fallback polling so updates continue
+        this._startRESTFallback();
+    }
+
+    /**
      * Commences active connection attempts.
      */
     connect() {
+        if (!this.isWebSocketEnabled) {
+            console.log('[BullionClient] WS connection blocked (WebSocket disabled).');
+            return;
+        }
         if (this.socket && (this.socket.readyState === WebSocket.CONNECTING || this.socket.readyState === WebSocket.OPEN)) {
             return;
         }
@@ -101,6 +164,10 @@ class BullionWebSocketClient {
         this._cleanupHeartbeat();
         this.socket = null;
 
+        if (!this.isWebSocketEnabled) {
+            return;
+        }
+
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             // Reconnection exponential backoff routine
             this._updateState('RECONNECTING');
@@ -148,6 +215,7 @@ class BullionWebSocketClient {
 
         // Periodically test WebSocket connection health every 30 seconds
         this.wsTestTimer = setInterval(() => {
+            if (!this.isWebSocketEnabled) return;
             console.log('[BullionClient] Attempting background WebSocket reconnection...');
             this.reconnectAttempts = 0;
             this.reconnectDelay = 1000;

@@ -16,9 +16,112 @@ import LiveCharts from "@/components/LiveCharts";
 import { useAdminStore } from "@/store/adminStore";
 
 export default function AdminDashboardPage() {
-  const { latestTelemetry, isConnected } = useAdminStore();
+  const { latestTelemetry, isConnected, token } = useAdminStore();
   const [prevPrices, setPrevPrices] = useState({ gold: 0, silver: 0 });
   const [flashClasses, setFlashClasses] = useState({ gold: "", silver: "" });
+
+  // Custom Local Stream Telemetry Sync States
+  const [localStreamingEnabled, setLocalStreamingEnabled] = useState<boolean | null>(null);
+  const [isToggling, setIsToggling] = useState(false);
+
+  // Custom Toast State Stack
+  interface ToastMessage {
+    id: string;
+    message: string;
+    type: "success" | "warning";
+  }
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = (message: string, type: "success" | "warning") => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  };
+
+  const getBackendUrl = () => {
+    const envUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+    if (envUrl) return envUrl;
+    
+    if (typeof window !== "undefined") {
+      const origin = window.location.origin;
+      if (origin.includes(":3000")) {
+        return origin.replace(":3000", ":8000");
+      }
+      return origin;
+    }
+    return "";
+  };
+
+  const streamingEnabled = localStreamingEnabled !== null 
+    ? localStreamingEnabled 
+    : (latestTelemetry?.streaming_enabled ?? true);
+
+  // Sync state dynamically when other admins push a websocket toggler update
+  useEffect(() => {
+    if (latestTelemetry?.streaming_enabled !== undefined) {
+      setLocalStreamingEnabled(latestTelemetry.streaming_enabled);
+    }
+  }, [latestTelemetry?.streaming_enabled]);
+
+  // Fetch initial stream status from REST API on page load
+  useEffect(() => {
+    const fetchStreamStatus = async () => {
+      if (!token) return;
+      try {
+        const apiHost = getBackendUrl();
+        const response = await fetch(`${apiHost}/api/admin/stream-status`, {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setLocalStreamingEnabled(data.enabled);
+        }
+      } catch (err) {
+        console.error("Failed to retrieve price stream status:", err);
+      }
+    };
+
+    fetchStreamStatus();
+  }, [token]);
+
+  // Handler to toggle active price broadcasting engine
+  const handleToggleStreaming = async () => {
+    if (isToggling || !token) return;
+    setIsToggling(true);
+    const targetState = !streamingEnabled;
+    
+    try {
+      const apiHost = getBackendUrl();
+      const response = await fetch(`${apiHost}/api/admin/toggle-stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ enabled: targetState })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setLocalStreamingEnabled(data.enabled);
+        addToast(
+          data.enabled ? "Streaming Engine Enabled" : "Streaming Engine Paused",
+          data.enabled ? "success" : "warning"
+        );
+      } else {
+        addToast("Failed to alter price streaming state", "warning");
+      }
+    } catch (err) {
+      console.error("Error setting pricing stream status:", err);
+      addToast("Network boundary connection error", "warning");
+    } finally {
+      setIsToggling(false);
+    }
+  };
 
   // Monitor price changes and apply micro green/red flash visual cues
   useEffect(() => {
@@ -128,14 +231,60 @@ export default function AdminDashboardPage() {
   return (
     <div className="flex flex-col gap-8 w-full">
       
-      {/* 1. Page Title */}
-      <div className="flex flex-col">
-        <h1 className="text-xl md:text-3xl font-extrabold tracking-tight uppercase text-white leading-tight">
-          Metrics Operations Console
-        </h1>
-        <p className="text-xs md:text-sm text-muted font-semibold tracking-wider mt-1 uppercase">
-          Live Centralised distributed price statistics monitor
-        </p>
+      {/* 1. Page Title & Streaming Control Toggle */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex flex-col">
+          <h1 className="text-xl md:text-3xl font-extrabold tracking-tight uppercase text-white leading-tight">
+            Metrics Operations Console
+          </h1>
+          <p className="text-xs md:text-sm text-muted font-semibold tracking-wider mt-1 uppercase">
+            Live Centralised distributed price statistics monitor
+          </p>
+        </div>
+
+        {/* Glassmorphic Toggling Control Board */}
+        <div className="flex items-center gap-4 bg-card/65 border border-border backdrop-blur-glass px-4 py-3 rounded-2xl flex-shrink-0 self-start md:self-auto shadow-xl transition-all duration-300 hover:border-white/10">
+          
+          {/* Animated Status Pulse Indicators */}
+          <div className="flex items-center gap-2.5">
+            <span className="relative flex h-3 w-3">
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                streamingEnabled ? "bg-[#00ff66]" : "bg-[#ff3b30]"
+              }`}></span>
+              <span className={`relative inline-flex rounded-full h-3 w-3 ${
+                streamingEnabled ? "bg-[#00ff66]" : "bg-[#ff3b30]"
+              }`}></span>
+            </span>
+            <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-white font-mono">
+              {streamingEnabled ? "STREAMING LIVE" : "STREAM PAUSED"}
+            </span>
+          </div>
+
+          {/* Separation line */}
+          <div className="h-5 w-px bg-border"></div>
+
+          {/* Toggle Switch Button */}
+          <label className="relative inline-flex items-center cursor-pointer select-none">
+            <input 
+              type="checkbox" 
+              checked={streamingEnabled} 
+              disabled={isToggling}
+              onChange={handleToggleStreaming} 
+              className="sr-only peer"
+            />
+            {/* The Switch slider bar */}
+            <div className={`w-11 h-6 bg-white/10 rounded-full peer peer-focus:ring-0 outline-none transition-all duration-300 relative border border-white/5 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white/80 after:border-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-amber-400 peer-checked:to-yellow-600 peer-checked:border-gold-primary ${
+              isToggling ? "opacity-50 cursor-wait" : ""
+            }`}>
+              {isToggling && (
+                <span className="absolute inset-0 flex items-center justify-center">
+                  <span className="w-2.5 h-2.5 border-2 border-t-transparent border-white rounded-full animate-spin"></span>
+                </span>
+              )}
+            </div>
+          </label>
+
+        </div>
       </div>
 
       {/* 2. Live Spot Pricing Accent Cards */}
@@ -224,6 +373,31 @@ export default function AdminDashboardPage() {
       {/* 4. Live Charts grid layout */}
       <div className="w-full mt-2 min-w-0 overflow-hidden">
         <LiveCharts />
+      </div>
+
+      {/* 5. Custom Glassmorphic Toast Stack Overlay */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none max-w-sm w-full sm:w-auto">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`pointer-events-auto flex items-center gap-3 px-5 py-3.5 rounded-2xl border backdrop-blur-md shadow-2xl transition-all duration-500 transform translate-y-0 ease-out animate-in slide-in-from-bottom-5 fade-in ${
+              toast.type === "success"
+                ? "bg-[#00ff66]/10 border-[#00ff66]/20 text-[#00ff66]"
+                : "bg-[#ff3b30]/10 border-[#ff3b30]/20 text-[#ff3b30]"
+            }`}
+          >
+            <span className={`relative flex h-2 w-2 rounded-full ${
+              toast.type === "success" ? "bg-[#00ff66]" : "bg-[#ff3b30]"
+            }`}>
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                toast.type === "success" ? "bg-[#00ff66]" : "bg-[#ff3b30]"
+              }`}></span>
+            </span>
+            <span className="text-[11px] font-black uppercase tracking-wider text-white font-sans">
+              {toast.message}
+            </span>
+          </div>
+        ))}
       </div>
 
     </div>

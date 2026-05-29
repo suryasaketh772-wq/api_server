@@ -13,6 +13,7 @@ export interface LogEntry {
 export interface TelemetryPayload {
   timestamp: number;
   uptime_seconds: number;
+  streaming_enabled?: boolean;
   system: {
     cpu_percent: number;
     ram: { total_bytes: number; used_bytes: number; percent: number };
@@ -162,8 +163,19 @@ export const useAdminStore = create<AdminState>((set, get) => ({
 
     set({ isConnecting: true });
 
-    // Standardise websocket protocol URL from base HTTP host
-    const wsProto = backendUrl.replace(/^http/, "ws");
+    // Resolve dynamic host URL without hardcoding localhost/127.0.0.1
+    let baseHttpUrl = backendUrl;
+    if (!baseHttpUrl && typeof window !== "undefined") {
+      baseHttpUrl = window.location.origin;
+    }
+    
+    // Dynamically translate dev frontend port 3000 to backend port 8000
+    if (baseHttpUrl && baseHttpUrl.includes(":3000")) {
+      baseHttpUrl = baseHttpUrl.replace(":3000", ":8000");
+    }
+
+    // Standardise websocket protocol URL from base HTTP host (converts http -> ws, https -> wss)
+    const wsProto = baseHttpUrl.replace(/^http/, "ws");
     const wsUrl = `${wsProto}/ws/admin?token=${token}`;
 
     try {
@@ -204,6 +216,21 @@ export const useAdminStore = create<AdminState>((set, get) => ({
               };
             });
           } 
+          
+          else if (data.type === "stream_status_changed") {
+            const enabled = data.enabled;
+            set((state) => {
+              if (state.latestTelemetry) {
+                return {
+                  latestTelemetry: {
+                    ...state.latestTelemetry,
+                    streaming_enabled: enabled
+                  }
+                };
+              }
+              return {};
+            });
+          }
           
           else if (data.type === "log_event") {
             const newLog = data as LogEntry;

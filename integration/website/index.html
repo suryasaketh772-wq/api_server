@@ -17,10 +17,21 @@
                 <p>Centralized Real-Time Bullion Metrics Portal</p>
             </div>
             
-            <!-- Connection Status Badge -->
-            <div id="statusBadge" class="status-badge connecting">
-                <span class="status-dot"></span>
-                <span id="statusText">CONNECTING...</span>
+            <div class="header-controls">
+                <!-- WebSocket Toggle Switch -->
+                <div class="control-panel">
+                    <span class="control-label">WebSocket</span>
+                    <label class="switch">
+                        <input type="checkbox" id="wsToggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <!-- Connection Status Badge -->
+                <div id="statusBadge" class="status-badge connecting">
+                    <span class="status-dot"></span>
+                    <span id="statusText">CONNECTING...</span>
+                </div>
             </div>
         </header>
 
@@ -142,7 +153,8 @@
             lastUpdated: document.getElementById('lastUpdated'),
             
             statusBadge: document.getElementById('statusBadge'),
-            statusText: document.getElementById('statusText')
+            statusText: document.getElementById('statusText'),
+            wsToggle: document.getElementById('wsToggle')
         };
 
         // Initialize the pricing WebSocket client
@@ -158,7 +170,30 @@
         // Start connection sequence
         client.connect();
 
+        // Event listener for active WebSocket toggle switch
+        elements.wsToggle.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                client.enableWebSocket();
+            } else {
+                client.disableWebSocket();
+            }
+        });
+
         function renderPrices(price) {
+            if (price.type === 'stream_paused') {
+                elements.statusBadge.classList.remove('connected', 'connecting');
+                elements.statusBadge.classList.add('fallback');
+                elements.statusText.textContent = 'PAUSED BY ADMIN';
+                return;
+            }
+
+            if (price.type === 'stream_resumed') {
+                elements.statusBadge.classList.remove('fallback', 'connecting');
+                elements.statusBadge.classList.add('connected');
+                elements.statusText.textContent = 'REALTIME (WEBSOCKET)';
+                return;
+            }
+
             // 1. Process Gold rates and apply directional visual cues
             const currentGold = price.gold_spot;
             elements.goldPrice.textContent = usdFormatter.format(currentGold);
@@ -214,7 +249,11 @@
                     break;
                 case 'FALLBACK_POLLING':
                     elements.statusBadge.classList.add('fallback');
-                    elements.statusText.textContent = 'DEGRADED (REST POLL 5s)';
+                    if (!client.isWebSocketEnabled) {
+                        elements.statusText.textContent = 'REST POLL (WS OFF)';
+                    } else {
+                        elements.statusText.textContent = 'DEGRADED (REST POLL 5s)';
+                    }
                     break;
                 default:
                     elements.statusText.textContent = 'DISCONNECTED';

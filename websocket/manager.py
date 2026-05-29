@@ -15,6 +15,7 @@ class ClientWebSocketManager:
         self.active_connections: Set[WebSocket] = set()
         self._lock = asyncio.Lock()
         self.total_broadcasts_count = 0
+        self._heartbeat_task: Any = None
 
     async def connect(self, websocket: WebSocket):
         # Resolve request headers for telemetry profile
@@ -35,18 +36,35 @@ class ClientWebSocketManager:
         
         async with self._lock:
             self.active_connections.add(websocket)
+            # Lazily start backend heartbeat monitor task under active loop
+            if not self._heartbeat_task or self._heartbeat_task.done():
+                self._heartbeat_task = asyncio.create_task(self._heartbeat_monitor())
+                
         logger.info(f"Client connected. Active pools: {len(self.active_connections)}")
+        
+        # Immediately broadcast updated client list to admins
+        from metrics.manager import api_server_metrics_manager
+        asyncio.create_task(api_server_metrics_manager.broadcast_telemetry_immediately())
 
-    async def disconnect(self, websocket: WebSocket):
+    async def disconnect(self, websocket: WebSocket, is_clean: bool = True):
         async with self._lock:
             if websocket in self.active_connections:
                 self.active_connections.remove(websocket)
-        # Clean up tracker memory registry
-        api_server_connection_registry.deregister(websocket)
+                
+        # Clean up tracker memory registry, keeping metadata temporarily if unclean
+        api_server_connection_registry.deregister(websocket, is_clean=is_clean)
         logger.info(f"Client disconnected. Active pools: {len(self.active_connections)}")
+        
+        # Immediately broadcast updated client list to admins
+        from metrics.manager import api_server_metrics_manager
+        asyncio.create_task(api_server_metrics_manager.broadcast_telemetry_immediately())
 
-    async def broadcast(self, message: str) -> None:
+    async def broadcast(self, message: str, ignore_gate: bool = False) -> None:
         """Broadcasts bullion spots concurrently, shielding against stalling socket nodes."""
+        from backend.app.core.stream_state import STREAMING_ENABLED
+        if not STREAMING_ENABLED and not ignore_gate:
+            return
+
         async with self._lock:
             if not self.active_connections:
                 return
@@ -64,11 +82,52 @@ class ClientWebSocketManager:
             # Shield writes with small 1.0s timeout to maintain high throughput speed
             await asyncio.wait_for(websocket.send_text(message), timeout=1.0)
         except (asyncio.TimeoutError, WebSocketDisconnect, Exception):
-            await self.disconnect(websocket)
+            await self.disconnect(websocket, is_clean=False)
             try:
                 await websocket.close()
             except Exception:
                 pass
+
+    async def _heartbeat_monitor(self) -> None:
+        """Periodically pings active sockets, cleans up dead connections and stale records."""
+        from backend.app.config import settings
+        interval = getattr(settings, "WS_HEARTBEAT_INTERVAL_SECS", 30)
+        logger.info(f"Backend Client WebSocket Heartbeat thread initialized (runs every {interval}s).")
+        
+        while True:
+            try:
+                await asyncio.sleep(interval)
+                
+                # 1. Ping active connections to find dead sockets
+                async with self._lock:
+                    if not self.active_connections:
+                        connections = []
+                    else:
+                        connections = list(self.active_connections)
+                
+                dead_sockets = []
+                for ws in connections:
+                    try:
+                        # Send lightweight ping string frame to client
+                        await asyncio.wait_for(ws.send_text("ping"), timeout=2.0)
+                    except Exception:
+                        dead_sockets.append(ws)
+                
+                for ws in dead_sockets:
+                    logger.warning(f"Closing dead client socket detected in heartbeat audit: {ws}")
+                    await self.disconnect(ws, is_clean=False)
+                    try:
+                        await ws.close()
+                    except Exception:
+                        pass
+                
+                # 2. Collect stale offline client telemetry records (5 mins default limit)
+                api_server_connection_registry.cleanup_stale_clients(expiration_seconds=300.0)
+                
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Exception inside backend heartbeat monitor: {e}", exc_info=True)
 
 
 class AdminWebSocketManager:

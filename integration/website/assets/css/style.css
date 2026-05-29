@@ -111,6 +111,96 @@ header {
     backdrop-filter: blur(var(--glass-blur));
 }
 
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Glassmorphic Toggle Switch */
+.control-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    backdrop-filter: blur(var(--glass-blur));
+    transition: var(--transition-smooth);
+}
+
+.control-panel:hover {
+    border-color: hsla(0, 0%, 100%, 0.15);
+    background: hsla(220, 20%, 15%, 0.8);
+}
+
+.control-label {
+    color: var(--text-muted);
+    font-size: 11px;
+    letter-spacing: 1px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 22px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: hsla(0, 0%, 100%, 0.1);
+    transition: var(--transition-smooth);
+    border: 1px solid var(--border-color);
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: var(--text-muted);
+    transition: var(--transition-smooth);
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background: var(--gold-gradient);
+    border-color: var(--gold-primary);
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+
+input:checked + .slider:before {
+    transform: translateX(22px);
+    background-color: var(--bg-dark);
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
 .status-dot {
     width: 8px;
     height: 8px;
@@ -358,8 +448,18 @@ footer {
         gap: 20px;
         align-items: flex-start;
     }
-    .status-badge {
+    .header-controls {
+        flex-direction: column;
         align-self: stretch;
+        width: 100%;
+        gap: 12px;
+    }
+    .control-panel, .status-badge {
+        width: 100%;
+        justify-content: space-between;
+        align-self: stretch;
+    }
+    .status-badge {
         justify-content: center;
     }
     .grid-layout {
